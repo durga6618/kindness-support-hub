@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,15 +19,66 @@ const Signup = () => {
     password: '',
     confirmPassword: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const { signUp, user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect authenticated users to home
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match!",
+        variant: "destructive"
+      });
       return;
     }
-    console.log('Signup attempt:', formData);
-    // Handle signup logic here
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await signUp(formData.email, formData.password, formData.fullName, formData.phone);
+      
+      if (error) {
+        toast({
+          title: "Signup Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Please check your email to verify your account."
+        });
+        navigate('/login');
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +116,7 @@ const Signup = () => {
                   onChange={handleChange}
                   className="pl-10 h-12 border-gray-300 focus:border-blue-500"
                   placeholder="Enter your full name"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -80,6 +134,7 @@ const Signup = () => {
                   onChange={handleChange}
                   className="pl-10 h-12 border-gray-300 focus:border-blue-500"
                   placeholder="Enter your email"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -97,6 +152,7 @@ const Signup = () => {
                   onChange={handleChange}
                   className="pl-10 h-12 border-gray-300 focus:border-blue-500"
                   placeholder="Enter your phone number"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -114,11 +170,13 @@ const Signup = () => {
                   onChange={handleChange}
                   className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500"
                   placeholder="Create a password"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -138,11 +196,13 @@ const Signup = () => {
                   onChange={handleChange}
                   className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500"
                   placeholder="Confirm your password"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  disabled={isLoading}
                 >
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -150,7 +210,7 @@ const Signup = () => {
             </div>
             
             <div className="flex items-start">
-              <input type="checkbox" required className="rounded text-blue-500 mt-1" />
+              <input type="checkbox" required className="rounded text-blue-500 mt-1" disabled={isLoading} />
               <span className="ml-2 text-sm text-gray-600">
                 I agree to the{' '}
                 <a href="#" className="text-blue-500 hover:text-blue-700">Terms of Service</a>
@@ -161,9 +221,10 @@ const Signup = () => {
             
             <Button 
               type="submit" 
+              disabled={isLoading}
               className="w-full h-12 bg-gradient-to-r from-blue-500 to-orange-500 hover:from-blue-600 hover:to-orange-600 text-lg font-semibold"
             >
-              Create Account
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
           

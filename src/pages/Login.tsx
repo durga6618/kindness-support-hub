@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,11 +15,47 @@ const Login = () => {
     email: '',
     password: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect authenticated users to home
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login attempt:', formData);
-    // Handle login logic here
+    setIsLoading(true);
+
+    try {
+      const { error } = await signIn(formData.email, formData.password);
+      
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully logged in."
+        });
+        navigate('/');
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,6 +93,7 @@ const Login = () => {
                   onChange={handleChange}
                   className="pl-10 h-12 border-gray-300 focus:border-blue-500"
                   placeholder="Enter your email"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -72,11 +111,13 @@ const Login = () => {
                   onChange={handleChange}
                   className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500"
                   placeholder="Enter your password"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -85,7 +126,7 @@ const Login = () => {
             
             <div className="flex items-center justify-between">
               <label className="flex items-center">
-                <input type="checkbox" className="rounded text-blue-500" />
+                <input type="checkbox" className="rounded text-blue-500" disabled={isLoading} />
                 <span className="ml-2 text-sm text-gray-600">Remember me</span>
               </label>
               <a href="#" className="text-sm text-blue-500 hover:text-blue-700">
@@ -95,9 +136,10 @@ const Login = () => {
             
             <Button 
               type="submit" 
+              disabled={isLoading}
               className="w-full h-12 bg-gradient-to-r from-blue-500 to-orange-500 hover:from-blue-600 hover:to-orange-600 text-lg font-semibold"
             >
-              Sign In
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
           </form>
           
